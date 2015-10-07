@@ -1,10 +1,6 @@
 // AccessQueue.hpp
 #ifndef _ACCESSQUEUE_HPP_
 #define _ACCESSQUEUE_HPP_
-#include <mutex>
-#include <condition_variable>
-#include <list>
-#include <map>
 
 class AccessQueue
 {

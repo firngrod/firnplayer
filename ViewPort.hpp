@@ -2,9 +2,6 @@
 #ifndef _VIEWPORT_HPP_
 #define _VIEWPORT_HPP_
 
-#include <ncurses.h>
-#include <string>
-#include <vector>
 
 class ViewPort
 {

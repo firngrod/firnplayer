@@ -1,6 +1,7 @@
 // QueueToken.cpp
 
-#include "includes/AccessQueue.hpp"
+#include "pch.h"
+
 
 AccessQueue::QueueToken::QueueToken(const std::pair<unsigned int, bool> * Identifier, AccessQueue *ParentQueue)
 {

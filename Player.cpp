@@ -1,18 +1,6 @@
 // Player.cpp
-#include "includes/ViewPort.hpp"
-#include "includes/AccessQueue.hpp"
-#include "includes/MetaData.hpp"
-#include <vector>
-#include <thread>
-#include "includes/Playlist.hpp"
-#include "includes/Player.hpp"
-#include <ncurses.h>
-#include "includes/json/value.h"
-#include "includes/json/reader.h"
-#include <fstream>
-#include <boost/filesystem.hpp>
-#include "includes/utils.h"
-#include <signal.h>
+
+#include "pch.h"
 
 Player * Player::ThePlayer = NULL;
 

@@ -1,6 +1,5 @@
 // Tracker.hpp
 
-#include "MetaData.hpp"
 
 namespace Firnplayer
 {

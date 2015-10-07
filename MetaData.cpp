@@ -1,13 +1,4 @@
-#include <taglib/mpegfile.h>
-#include <taglib/id3v2tag.h>
-#include <dirent.h>
-#include <list>
-#include <string>
-#include <algorithm>
-#include "includes/json/value.h"
-#include "includes/utils.h"
-#include "includes/MetaData.hpp"
-
+#include "pch.h"
 
 Json::Value ScanDirectory(const std::string &Root)
 {

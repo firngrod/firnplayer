@@ -1,10 +1,6 @@
 // ViewPort.cpp
 
-#include "includes/ViewPort.hpp"
-#include "includes/utils.h"
-#include <vector>
-#include <cstring>
-
+#include "pch.h"
 
 // Library initialization
 bool ViewPort::Initialized = false;
