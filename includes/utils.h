@@ -66,9 +66,8 @@ inline T Min(const T &Number1, const T &Number2)
   return (Number1 < Number2) ? Number1 : Number2;
 }
 
-static std::string StringPrintf(const std::string &Format, ...)
+static std::string StringPrintf(const std::string Format, ...)
 {
-  std::string Format2 = /*std::string("2") +*/ Format;
   // Format a string into an std::string with the same syntax as the old-school vsprintf(const char * fmt, ...)
   va_list FormatArguments, FormatArgs;
   va_start(FormatArgs, Format);
@@ -76,12 +75,12 @@ static std::string StringPrintf(const std::string &Format, ...)
   // sure that no albeit huge predefined buffer will ever overflow.
   // I read somewhere that vsnprintf can modify the arglist, so we do a copy for it to play with.
   va_copy(FormatArguments, FormatArgs);
-  int TotalLength = vsnprintf(NULL, 0, Format2.c_str(), FormatArguments);
+  int TotalLength = vsnprintf(NULL, 0, Format.c_str(), FormatArguments);
   va_end(FormatArguments);
   // Now use this info to make a buffer and vsprintf into it, convert it into an std::string, clean up and return
   // the string.
   char * Buffer = new char[TotalLength + 1];
-  vsprintf(Buffer, Format2.c_str(), FormatArgs);
+  vsprintf(Buffer, Format.c_str(), FormatArgs);
   std::string ReturnString = Buffer;
   va_end(FormatArgs);
   delete[] Buffer;
