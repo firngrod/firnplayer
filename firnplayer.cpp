@@ -2,7 +2,7 @@
 
 int main(int argc, char ** argv)
 {
-  Player ThePlayer;
+  Firnplayer::Player ThePlayer;
   ThePlayer.DoRun();
   fsleep(1);
 

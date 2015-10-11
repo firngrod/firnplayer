@@ -2,10 +2,10 @@
 
 #include "pch.h"
 
-Player * Player::ThePlayer = NULL;
+Firnplayer::Player * Firnplayer::Player::ThePlayer = NULL;
 
 // Constructor
-Player::Player()
+Firnplayer::Player::Player()
 {
   ConfigDir = cleanpath(HomePath() + "/.firnplayer");
   ConfigFile = cleanpath(ConfigDir + "/Configuration.json");
@@ -58,7 +58,7 @@ Player::Player()
   Running = 1;
 }
 
-void Player::DoRun()
+void Firnplayer::Player::DoRun()
 {
   signal(SIGWINCH, ResizeHandler);
   ViewPort::Initialize();
@@ -75,12 +75,12 @@ void Player::DoRun()
   Shutdown();
 }
 
-void Player::ResizeHandler(int Signal)
+void Firnplayer::Player::ResizeHandler(int Signal)
 {
   ThePlayer->Redraw();
 }
 
-void Player::InputHandler(int Stuff)
+void Firnplayer::Player::InputHandler(int Stuff)
 {
   while(ThePlayer->Running == 1)
   {
@@ -120,7 +120,7 @@ void Player::InputHandler(int Stuff)
   }
 }
 
-void Player::ToggleExpanded()
+void Firnplayer::Player::ToggleExpanded()
 {
   bool DoResetTracks = !!Artists.GetCurrentPosition().second.size();
   Artists.ToggleExpanded();
@@ -132,7 +132,7 @@ void Player::ToggleExpanded()
   }
 }
 
-void Player::MoveUp()
+void Firnplayer::Player::MoveUp()
 {
   if(ActiveViewPort == ACTIVE_ARTISTS)
   {
@@ -152,7 +152,7 @@ void Player::MoveUp()
   }
 }
 
-void Player::MoveDown()
+void Firnplayer::Player::MoveDown()
 {
   if(ActiveViewPort == ACTIVE_ARTISTS)
   {
@@ -175,7 +175,7 @@ void Player::MoveDown()
   }
 }
 
-void Player::MoveLeft()
+void Firnplayer::Player::MoveLeft()
 {
   if(ActiveViewPort == ACTIVE_TRACKS)
   {
@@ -185,7 +185,7 @@ void Player::MoveLeft()
   }
 }
 
-void Player::MoveRight()
+void Firnplayer::Player::MoveRight()
 {
   if(ActiveViewPort == ACTIVE_ARTISTS)
   {
@@ -195,13 +195,13 @@ void Player::MoveRight()
   }
 }
 
-void Player::SignalShutdown()
+void Firnplayer::Player::SignalShutdown()
 {
   Running = 3;
   ThePlayer->CVForShutdown.notify_all();
 }
 
-void Player::Shutdown()
+void Firnplayer::Player::Shutdown()
 {
   Running = 2;
   for(std::map<std::string, std::thread>::iterator ThreadItr = Threads.begin(), ThreadEnd = Threads.end();
@@ -216,7 +216,7 @@ void Player::Shutdown()
 }
 
 
-void Player::Redraw()
+void Firnplayer::Player::Redraw()
 {
   AccessQueue::QueueToken QueueTicket = ViewPortsQueue.Lock();
   endwin();
@@ -238,7 +238,7 @@ void Player::Redraw()
 }
 
 
-void Player::ResetShownTracks()
+void Firnplayer::Player::ResetShownTracks()
 {
   TracksActualPos = 0;
   PositionInTracks = 0;
@@ -247,19 +247,19 @@ void Player::ResetShownTracks()
   Artists.GetTrackList(TracksForShow, TracksForShowPrintable);
 }
 
-void Player::DrawPlaylist()
+void Firnplayer::Player::DrawPlaylist()
 {
   PlaylistView.DrawFrame();
 }
 
 
-void Player::DrawQueue()
+void Firnplayer::Player::DrawQueue()
 {
   QueueView.DrawFrame();
 }
 
 
-void Player::DrawArtists()
+void Firnplayer::Player::DrawArtists()
 {
   ArtistView.DrawFrame();
   int TotalHeight = ArtistView.GetHeight();
@@ -323,7 +323,7 @@ void Player::DrawArtists()
 }
 
 
-void Player::DrawTracks()
+void Firnplayer::Player::DrawTracks()
 {
   TrackView.DrawFrame();
   auto ArtistLock = ArtistsQueue.Lock();
@@ -383,11 +383,11 @@ void Player::DrawTracks()
 }
 
 
-//void Player::DrawList(Firnplayer::Playlist &ForDrawing, ViewPort &ThePort)
+//void Firnplayer::Player::DrawList(Firnplayer::Playlist &ForDrawing, ViewPort &ThePort)
 //{
 
 
-void Player::RedefineDivisors()
+void Firnplayer::Player::RedefineDivisors()
 {
   RightPart = QueuePlaylist = WholeScreen = ViewPort::Divisor();
   RightPart.Divide(TrackView, 100 - Options["Layout Settings"]["Layout"]["Queue Column Width"].asDouble());
@@ -403,12 +403,12 @@ void Player::RedefineDivisors()
 }
 
 
-std::string Player::GetFatalError()
+std::string Firnplayer::Player::GetFatalError()
 {
   return FatalErrorString;
 }
 
-bool Player::LoadJson(const std::string &FilePath, Json::Value &Container)
+bool Firnplayer::Player::LoadJson(const std::string &FilePath, Json::Value &Container)
 {
   Json::Reader Reader;
   std::ifstream FileInput;
@@ -428,7 +428,7 @@ void VerifyOption(Json::Value &Option, const int &Default, const int &Lower, con
     Option = Default;
 }
 
-void Player::SanitizeConfig()
+void Firnplayer::Player::SanitizeConfig()
 {
   int CurrentOptionsVersion = 1;
   // This stuff is pretty hardcoded, but it was an easy way to implement a default configuration.
@@ -466,7 +466,7 @@ void Player::SanitizeConfig()
 }
 
 
-void Player::Sortfunction(ArtistList &Artists, AccessQueue &ArtistsQueue, Json::Value &TrackList, 
+void Firnplayer::Player::Sortfunction(ArtistList &Artists, AccessQueue &ArtistsQueue, Json::Value &TrackList, 
                   AccessQueue &TrackListQueue)
 {
   // Thread Function for funelling the tracklist into the ArtistList's sort function.

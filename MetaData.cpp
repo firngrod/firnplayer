@@ -1,6 +1,9 @@
 #include "pch.h"
 
-Json::Value ScanDirectory(const std::string &Root)
+// Using namespace out of laziness
+//using namespace Firnplayer;
+
+Json::Value Firnplayer::ScanDirectory(const std::string &Root)
 {
   // Initializations
   DIR *dir;
@@ -61,23 +64,23 @@ Json::Value ScanDirectory(const std::string &Root)
 // ListAlbum Class functions
 //
 
-ListAlbum::ListAlbum(const std::string &Name)
+Firnplayer::ListAlbum::ListAlbum(const std::string &Name)
 {
   this->Name = Name;
 }
 
-ListAlbum::ListAlbum(Json::Value * TrackJson)
+Firnplayer::ListAlbum::ListAlbum(Json::Value * TrackJson)
 {
   this->Name = (*TrackJson)["TALB"].asString();
   AddTrack(TrackJson);
 }
 
-std::string ListAlbum::GetName()
+std::string Firnplayer::ListAlbum::GetName()
 {
   return Name;
 }
 
-Json::Value * ListAlbum::operator[](const unsigned int &TrackNumber)
+Json::Value * Firnplayer::ListAlbum::operator[](const unsigned int &TrackNumber)
 {
   if(TrackNumber < Tracks.size())
     return Tracks[TrackNumber];
@@ -85,12 +88,12 @@ Json::Value * ListAlbum::operator[](const unsigned int &TrackNumber)
     return NULL;
 }
 
-int ListAlbum::GetTrackCount()
+int Firnplayer::ListAlbum::GetTrackCount()
 {
   return Tracks.size();
 }
 
-void ListAlbum::AddTrack(Json::Value * TrackJson)
+void Firnplayer::ListAlbum::AddTrack(Json::Value * TrackJson)
 {
   std::vector<Json::Value *>::iterator TrackItr = Tracks.begin(), TrackEnd = Tracks.end(),
                                              InsertPoint = Tracks.end();
@@ -114,7 +117,7 @@ void ListAlbum::AddTrack(Json::Value * TrackJson)
   Tracks.insert(InsertPoint, TrackJson);
 }
 
-void ListAlbum::GetTrackList(std::vector<Json::Value *> &TrackListOut, std::vector<std::string> &TrackListOutPretty)
+void Firnplayer::ListAlbum::GetTrackList(std::vector<Json::Value *> &TrackListOut, std::vector<std::string> &TrackListOutPretty)
 {
   std::vector<std::pair<int, std::string> > TrackInfoForPrint;
   int LargestTrackNo = 0;
@@ -152,25 +155,25 @@ void ListAlbum::GetTrackList(std::vector<Json::Value *> &TrackListOut, std::vect
 // ListArtist Class functions
 //
 
-ListArtist::ListArtist(const std::string &Name)
+Firnplayer::ListArtist::ListArtist(const std::string &Name)
 {
   this->Name = Name;
   Expanded = false;
 }
 
-ListArtist::ListArtist(Json::Value * TrackJson)
+Firnplayer::ListArtist::ListArtist(Json::Value * TrackJson)
 {
   this->Name = (*TrackJson)["TPE2"].asString();
   Expanded = false;
   AddTrack(TrackJson);
 }
 
-std::string ListArtist::GetName()
+std::string Firnplayer::ListArtist::GetName()
 {
   return Name;
 }
 
-ListAlbum * ListArtist::operator[](const unsigned int &AlbumNumber)
+Firnplayer::ListAlbum * Firnplayer::ListArtist::operator[](const unsigned int &AlbumNumber)
 {
   if(AlbumNumber < Albums.size())
     return &Albums[AlbumNumber];
@@ -178,7 +181,7 @@ ListAlbum * ListArtist::operator[](const unsigned int &AlbumNumber)
     return NULL;
 }
 
-ListAlbum * ListArtist::operator[](const std::string &AlbumName)
+Firnplayer::ListAlbum * Firnplayer::ListArtist::operator[](const std::string &AlbumName)
 {
   std::vector<ListAlbum>::iterator AlbumItr = std::find(Albums.begin(), Albums.end(), AlbumName);
   if(AlbumItr != Albums.end())
@@ -187,7 +190,7 @@ ListAlbum * ListArtist::operator[](const std::string &AlbumName)
     return NULL;
 }
 
-void ListArtist::AddTrack(Json::Value * TrackJson)
+void Firnplayer::ListArtist::AddTrack(Json::Value * TrackJson)
 {
   if(TrackJson->get("TALB", "").asString() == "")
     (*TrackJson)["TALB"] = "Unknown Album";
@@ -202,17 +205,17 @@ void ListArtist::AddTrack(Json::Value * TrackJson)
   }
 }
 
-int ListArtist::GetAlbumCount()
+int Firnplayer::ListArtist::GetAlbumCount()
 {
   return Albums.size();
 }
 
-int ListArtist::GetLineUsage()
+int Firnplayer::ListArtist::GetLineUsage()
 {
   return 1 + (Expanded ? Albums.size() : 0);
 }
 
-int ListArtist::GetAlbumPosition(const std::string &AlbumName)
+int Firnplayer::ListArtist::GetAlbumPosition(const std::string &AlbumName)
 {
   if(!AlbumName.size())
     return -1;
@@ -224,7 +227,7 @@ int ListArtist::GetAlbumPosition(const std::string &AlbumName)
     return std::distance(Albums.begin(), AlbumItr);
 }
 
-void ListArtist::GetTrackList(std::vector<Json::Value *> &TrackListOut,
+void Firnplayer::ListArtist::GetTrackList(std::vector<Json::Value *> &TrackListOut,
                               std::vector<std::string> &TrackListOutPretty, std::string AlbumName)
 {
   ListAlbum * ActiveAlbum = operator[](AlbumName);
@@ -253,7 +256,7 @@ void ListArtist::GetTrackList(std::vector<Json::Value *> &TrackListOut,
 // ArtistList Class functions
 //
 
-void ArtistList::AddTrack(Json::Value * TrackJson)
+void Firnplayer::ArtistList::AddTrack(Json::Value * TrackJson)
 {
   if(TrackJson->get("TPE2", "").asString() == "")
     (*TrackJson)["TPE2"] = "Unknown Artist";
@@ -269,7 +272,7 @@ void ArtistList::AddTrack(Json::Value * TrackJson)
   }
 }
 
-bool ArtistList::MoveUp(std::pair<std::string, std::string> * PositionPtr)
+bool Firnplayer::ArtistList::MoveUp(std::pair<std::string, std::string> * PositionPtr)
 {
   std::pair<std::string, std::string> &Position = PositionPtr ? *PositionPtr : CurrentPosition;
 
@@ -335,12 +338,12 @@ bool ArtistList::MoveUp(std::pair<std::string, std::string> * PositionPtr)
   return true;
 }
 
-bool ArtistList::MoveUp(std::pair<std::string, std::string> &Position)
+bool Firnplayer::ArtistList::MoveUp(std::pair<std::string, std::string> &Position)
 {
   return MoveUp(&Position);
 }
 
-std::string ArtistList::PosToString(std::pair<std::string, std::string> PositionToPrint)
+std::string Firnplayer::ArtistList::PosToString(std::pair<std::string, std::string> PositionToPrint)
 {
   if(PositionToPrint.second.size())
   {
@@ -352,7 +355,7 @@ std::string ArtistList::PosToString(std::pair<std::string, std::string> Position
   }
 }
 
-void ArtistList::ToggleExpanded()
+void Firnplayer::ArtistList::ToggleExpanded()
 {
   std::vector<ListArtist>::iterator CurrentArtist = std::find(Artists.begin(), Artists.end(), CurrentPosition.first);
   if(CurrentArtist != Artists.end())
@@ -362,7 +365,7 @@ void ArtistList::ToggleExpanded()
   }
 }
   
-bool ArtistList::MoveDown(std::pair<std::string, std::string> * PositionPtr)
+bool Firnplayer::ArtistList::MoveDown(std::pair<std::string, std::string> * PositionPtr)
 {
   std::pair<std::string, std::string> &Position = PositionPtr ? *PositionPtr : CurrentPosition;
 
@@ -414,7 +417,7 @@ bool ArtistList::MoveDown(std::pair<std::string, std::string> * PositionPtr)
   return true;
 }
 
-void ArtistList::GetTrackList(std::vector<Json::Value *> &TrackListOut,
+void Firnplayer::ArtistList::GetTrackList(std::vector<Json::Value *> &TrackListOut,
                               std::vector<std::string> &TrackListOutPretty)
 {
   auto CurrentArtist = std::find(Artists.begin(), Artists.end(), CurrentPosition.first);
@@ -423,12 +426,12 @@ void ArtistList::GetTrackList(std::vector<Json::Value *> &TrackListOut,
   CurrentArtist->GetTrackList(TrackListOut, TrackListOutPretty, CurrentPosition.second);
 }
 
-bool ArtistList::MoveDown(std::pair<std::string, std::string> &Position)
+bool Firnplayer::ArtistList::MoveDown(std::pair<std::string, std::string> &Position)
 {
   return MoveDown(&Position);
 }
 
-std::pair<std::string, std::string> ArtistList::GetCurrentPosition()
+std::pair<std::string, std::string> Firnplayer::ArtistList::GetCurrentPosition()
 {
   if(!CurrentPosition.first.size() && Artists.size())
   {
