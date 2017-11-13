@@ -1,0 +1,3 @@
+[submodule "firnlibs"]
+	path = firnlibs
+	url = https://github.com/firngrod/firnlibs
