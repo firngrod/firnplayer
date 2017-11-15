@@ -16,6 +16,8 @@ namespace FirnPlayer
 
     Json::Value GetTrack(const std::string &path);
 
+    Json::Value GetTracksMatchingMetadata(const std::string &metadata);
+
   private:
     sqlite3_stmt *AddTrackStmt();
     sqlite3_stmt *addTrackStmt;
@@ -31,6 +33,10 @@ namespace FirnPlayer
     sqlite3_stmt *getTrackidFromPathStmt;
     sqlite3_stmt *GetMetadataStmt();
     sqlite3_stmt *getMetadataStmt;
+    sqlite3_stmt *GetPathFromIdStmt();
+    sqlite3_stmt *getPathFromIdStmt;
+
+    Json::Value GetTrack(const int64_t &trackid, const std::string &path = "");
 
     void PrepMetadataStmts();
     FirnLibs::SQLite db;

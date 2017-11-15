@@ -16,6 +16,7 @@ Database::Database()
   getMetadataMatchStmt = nullptr;
   getTrackidFromPathStmt = nullptr;
   getMetadataStmt = nullptr;
+  getPathFromIdStmt = nullptr;
 }
 
 
@@ -71,7 +72,7 @@ sqlite3_stmt *Database::AddMetadataStmt()
 sqlite3_stmt *Database::GetMetadataMatchStmt()
 {
   if(getMetadataMatchStmt == nullptr)
-    getMetadataMatchStmt = db.Prepare("SELECT path FROM tracks WHERE trackid IN (SELECT trackid FROM metadata WHERE value LIKE ?);");
+    getMetadataMatchStmt = db.Prepare("SELECT DISTINCT trackid FROM metadata WHERE value LIKE '%' || ? || '%' COLLATE NOCASE;");
   return getMetadataMatchStmt;
 }
 
@@ -108,6 +109,14 @@ sqlite3_stmt *Database::GetMetadataStmt()
 }
 
 
+sqlite3_stmt *Database::GetPathFromIdStmt()
+{
+  if(getPathFromIdStmt == nullptr)
+    getPathFromIdStmt = db.Prepare("SELECT key, value FROM metadata WHERE trackid=?;");
+  return getPathFromIdStmt;
+}
+
+
 Json::Value Database::GetTrack(const std::string &path)
 {
   int64_t trackid = 0;
@@ -120,8 +129,23 @@ Json::Value Database::GetTrack(const std::string &path)
   if(trackid == 0)
     return Json::Value();
 
+  return GetTrack(trackid);
+}
+
+
+Json::Value Database::GetTrack(const int64_t &trackid, const std::string &path)
+{
+  std::string pathInHere = path;
+  if(pathInHere == "")
+  {
+    auto lambda1 = [&pathInHere] (const FirnLibs::SQLite::PrepVector &vals, const std::vector<std::string> &colNames) -> void
+    {
+      vals[0].GetValue(pathInHere);
+    };
+    db.PreparedExecute(GetPathFromIdStmt(), {FirnLibs::SQLite::Prepvar(trackid)}, lambda1);
+  }
   Json::Value trackInfo;
-  trackInfo["FILE"] = path;
+  trackInfo["FILE"] = pathInHere;
   trackInfo["TRID"] = trackid;
   auto lambda2 = [&trackInfo] (const FirnLibs::SQLite::PrepVector &vals, const std::vector<std::string> &colNames) -> void
   {
@@ -195,6 +219,28 @@ Json::Value Database::GetSettings()
 
   return settings;
 }
+
+
+Json::Value Database::GetTracksMatchingMetadata(const std::string &metadata)
+{
+  std::vector<int64_t> matchingTracks;
+  auto lambda = [&matchingTracks] (const std::vector<FirnLibs::SQLite::Prepvar> &vals, const std::vector<std::string> &colNames) -> void
+  {
+    matchingTracks.push_back(0);
+    vals[0].GetValue(matchingTracks.back());
+  };
+  db.PreparedExecute(GetMetadataMatchStmt(), {FirnLibs::SQLite::Prepvar(metadata)}, lambda);
+
+  Json::Value tracks;
+
+  for(auto trackid: matchingTracks)
+  {
+    tracks[tracks.size()] = GetTrack(trackid);
+  }
+
+  return tracks;  
+}
+
 
 
 }

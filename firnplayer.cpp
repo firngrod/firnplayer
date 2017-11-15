@@ -23,7 +23,8 @@ int main(int argc, char ** argv)
   FirnPlayer::Player player;
   player.Start();
 
-  sleep(500);
+  std::string tmpie;
+  std::getline(std::cin, tmpie);
   //FirnLibs::Mp3::Mp3Stream stream;
   //stream.SetNextGetter(std::function<std::string (const std::string &)>(NextGetter));
   //stream.play();

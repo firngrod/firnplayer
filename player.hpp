@@ -23,6 +23,7 @@ namespace FirnPlayer
     void ClientErrorCallback(const std::shared_ptr<FirnLibs::Networking::Client> &client, const int &error);
 
     void DoScan(const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::vector<std::string> command);
+    void HandleSearch(const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::vector<std::string> command);
     FirnLibs::Threading::Threadpool scanPool;
 
     const std::map<std::string, std::vector<std::string> > settingsMap = 

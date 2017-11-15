@@ -80,6 +80,10 @@ void Player::ClientCallback(const std::shared_ptr<FirnLibs::Networking::Client> 
     FirnLibs::Crypto::StringToVector(reply, "Started scan\n");
     client->Send(reply);
   }
+  if(FirnLibs::String::CmpNoCase(baseKey, "search"))
+  {
+    HandleSearch(client, command);
+  }
 }
 
 
@@ -142,6 +146,53 @@ void Player::HandleSettings(const std::shared_ptr<FirnLibs::Networking::Client> 
   std::vector<unsigned char> reply;
   FirnLibs::Crypto::StringToVector(reply, "Invalid setting.");
   client->Send(reply);
+}
+
+
+void Player::HandleSearch(const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::vector<std::string> command)
+{
+  std::string searchTerm;
+  for(unsigned int i = 1; i < command.size(); i++)
+  {
+    searchTerm += searchTerm.size() > 0 ? " " : "";
+    searchTerm += command[i];
+  }
+
+  Json::Value tracks;
+  {
+    auto tok = db.Get();
+    tracks = tok->GetTracksMatchingMetadata(searchTerm);
+  }
+
+  std::vector<int64_t> trid;
+  std::vector<int> trno;
+  std::vector<std::string> artist, album, trackss;
+  size_t artLen = 0, albLen = 0, trackLen = 0;
+  for(const Json::Value &track: tracks)
+  {
+    trid.push_back(std::stoll(track.get("TRID", "0").asString()));
+    artist.push_back(track.get("TPE1", "").asString().c_str());
+    album.push_back(track.get("TALB", "").asString().c_str());
+    trackss.push_back(track.get("TIT2", "").asString().c_str());
+    trno.push_back(std::stoi(track.get("TRCK", "0").asString()));
+    if(artLen < artist.back().size())
+      artLen = artist.back().size();
+    if(albLen < album.back().size())
+      albLen = album.back().size();
+  }
+  std::vector<unsigned char> reply;
+  std::string replyStr;
+  for(size_t i = 0; i < album.size(); i++)
+  {
+    replyStr = FirnLibs::String::StringPrintf("%6d: %-*s - %-*s - %3d %s\n",
+                trid[i],
+                artLen, artist[i].c_str(),
+                albLen, album[i].c_str(),
+                trno[i],
+                trackss[i].c_str());
+    FirnLibs::Crypto::StringToVector(reply, replyStr);
+    client->Send(reply);
+  }
 }
 
 }
