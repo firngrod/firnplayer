@@ -168,13 +168,20 @@ void Player::HandleSearch(const std::shared_ptr<FirnLibs::Networking::Client> &c
   std::vector<int> trno;
   std::vector<std::string> artist, album, trackss;
   size_t artLen = 0, albLen = 0, trackLen = 0;
+  std::string tmp;
   for(const Json::Value &track: tracks)
   {
     trid.push_back(std::stoll(track.get("TRID", "0").asString()));
     artist.push_back(track.get("TPE1", "").asString().c_str());
     album.push_back(track.get("TALB", "").asString().c_str());
     trackss.push_back(track.get("TIT2", "").asString().c_str());
-    trno.push_back(std::stoi(track.get("TRCK", "0").asString()));
+    tmp = track.get("TRCK", "0").asString();
+    if(tmp.find_first_not_of("0123456789") == std::string::npos && tmp.size() != 0)
+      trno.push_back(std::stoi(tmp));
+    else
+    {
+      trno.push_back(0);
+    }
     if(artLen < artist.back().size())
       artLen = artist.back().size();
     if(albLen < album.back().size())
@@ -193,6 +200,9 @@ void Player::HandleSearch(const std::shared_ptr<FirnLibs::Networking::Client> &c
     FirnLibs::Crypto::StringToVector(reply, replyStr);
     client->Send(reply);
   }
+  replyStr = FirnLibs::String::StringPrintf("%d tracks total.\n", tracks.size());
+  FirnLibs::Crypto::StringToVector(reply, replyStr);
+  client->Send(reply);
 }
 
 }
