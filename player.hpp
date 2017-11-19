@@ -1,6 +1,7 @@
 #pragma once
 #include "firnlibs/networking/networking.hpp"
 #include "database.hpp"
+#include "firnlibs/mp3/mp3stream.hpp"
 
 
 namespace FirnPlayer
@@ -14,8 +15,9 @@ namespace FirnPlayer
   protected:
     FirnLibs::Threading::GuardedVar<Database> db;
     FirnLibs::Networking::Listener clientListener;
+    FirnLibs::Mp3::Mp3Stream stream;
 
-
+    std::string NextGetter(const std::string &current);
 
     std::vector<std::shared_ptr<FirnLibs::Networking::Client> > clients;
     void AddClient(const std::shared_ptr<FirnLibs::Networking::Client> &client);
@@ -25,6 +27,10 @@ namespace FirnPlayer
     void DoScan(const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::vector<std::string> command);
     void HandleSearch(const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::vector<std::string> command);
     FirnLibs::Threading::Threadpool scanPool;
+    void HandlePlay(const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::vector<std::string> command);
+
+    void PreparePlaylist(const std::string &current);
+    std::vector<std::string> playlist;
 
     const std::map<std::string, std::vector<std::string> > settingsMap = 
     {

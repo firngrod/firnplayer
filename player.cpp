@@ -15,6 +15,13 @@ void Player::Start()
   FirnLibs::Files::CreateFolder(dataPath);
   std::string dbPath = dataPath + "/database.sqlite";
 
+  auto nextLambda = [this] (const std::string &current) -> std::string
+  {
+    return this->NextGetter(current);
+  };
+
+  stream.SetNextGetter(nextLambda);
+
   {
     auto tok = db.Get();
     tok->Initialize(dbPath);
@@ -67,6 +74,7 @@ void Player::ClientCallback(const std::shared_ptr<FirnLibs::Networking::Client> 
   if(FirnLibs::String::CmpNoCase(baseKey, "settings"))
   {
     HandleSettings(client, command);
+    PreparePlaylist(stream.GetCurrent());
   }
   if(FirnLibs::String::CmpNoCase(baseKey, "scan"))
   {
@@ -83,6 +91,18 @@ void Player::ClientCallback(const std::shared_ptr<FirnLibs::Networking::Client> 
   if(FirnLibs::String::CmpNoCase(baseKey, "search"))
   {
     HandleSearch(client, command);
+  }
+  if(FirnLibs::String::CmpNoCase(baseKey, "play"))
+  {
+    HandlePlay(client, command);
+  }
+  if(FirnLibs::String::CmpNoCase(baseKey, "stop"))
+  {
+    stream.pause();
+  }
+  if(FirnLibs::String::CmpNoCase(baseKey, "resume"))
+  {
+    stream.play();
   }
 }
 
@@ -107,13 +127,14 @@ void Player::DoScan(const std::shared_ptr<FirnLibs::Networking::Client> &client,
       if(recordedFileTime != fileTime)
       {
         tmpie = Json::Value();
-        FirnLibs::Mp3::GetMetadata(tmpie, path);
+        FirnLibs::Mp3::GetMetadata(tmpie, path, {"TPE1", "TPE2", "TALB", "TIT2"}, "Unknown");
         tok->AddTrack(tmpie);
       }
     }
   };
   
   FirnLibs::Files::ForEachFile(scanPath, lambda, true);
+  PreparePlaylist(stream.GetCurrent());
 }
 
 
@@ -137,7 +158,8 @@ void Player::HandleSettings(const std::shared_ptr<FirnLibs::Networking::Client> 
       {
         tok->SetSetting(command[1], command[2]);
         std::vector<unsigned char> reply;
-        FirnLibs::Crypto::StringToVector(reply, "Settings succesfully updated.");
+        Json::Value settings = tok->GetSettings();
+        FirnLibs::Crypto::StringToVector(reply, "Settings succesfully updated.\n" + settings.toStyledString());
         client->Send(reply);
         return;
       }
@@ -204,6 +226,118 @@ void Player::HandleSearch(const std::shared_ptr<FirnLibs::Networking::Client> &c
   FirnLibs::Crypto::StringToVector(reply, replyStr);
   client->Send(reply);
 }
+
+
+void Player::HandlePlay(const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::vector<std::string> command)
+{
+  std::vector<unsigned char> reply;
+  if(command.size() != 2)
+  {
+    FirnLibs::Crypto::StringToVector(reply, "Invalid usage.  Usage:  play <trackid>\n");
+    client->Send(reply);
+  }
+
+  if(command[1].find_first_not_of("0123456789") != std::string::npos)
+  {
+    FirnLibs::Crypto::StringToVector(reply, "Invalid usage.  trackid must be all numbers.\n");
+  }
+  
+  int64_t trackid = std::stoll(command[1]);
+
+  std::string trackPath;
+  {
+    auto tok = db.Get();
+    trackPath = tok->GetTrackPath(trackid);
+    PreparePlaylist(trackPath);
+  }
+  stream.PlayTrack(trackPath);
+}
+
+
+void Player::PreparePlaylist(const std::string &current)
+{
+  auto tok = db.Get();
+  Json::Value settings = tok->GetSettings();
+  std::string scope = settings.get("scope", "all").asString();
+  playlist.clear();
+  if(scope == "track")
+  {
+    playlist.push_back(current);
+  }
+  else
+  {
+    Json::Value curTrack = tok->GetTrack(current);
+    std::string metaKey;
+    if(scope == "artist" || scope == "all")
+    {
+      metaKey = "TPE2";
+    }
+    else if(scope == "album")
+    {
+      metaKey = "TALB";
+    }
+    std::string metaValue = curTrack.get(metaKey, "").asString();
+
+    Json::Value tracks = tok->GetTracksMatchingMetadata(metaValue, metaKey);
+    std::map<std::string, std::map<int, std::vector<std::string> > > sortingMap;
+    std::string tmp;
+    int trackNo = 0;
+    for(const Json::Value &track: tracks)
+    {
+      tmp = track.get("TRCK", "0").asString();
+      if(tmp.find_first_not_of("0123456789") == std::string::npos && tmp.size() != 0)
+      {
+        trackNo = std::stoi(tmp);
+      }
+      else
+      {
+        trackNo = 0;
+      }
+      sortingMap[track.get("TALB", "").asString()][trackNo].push_back(track.get("FILE", "").asString());
+    }
+    for(auto s1Itr = sortingMap.begin(), s1End = sortingMap.end(); s1Itr != s1End; s1Itr++)
+    {
+      for(auto s2Itr = s1Itr->second.begin(), s2End = s1Itr->second.end(); s2Itr != s2End; s2Itr++)
+      {
+        for(auto s3Itr = s2Itr->second.begin(), s3End = s2Itr->second.end(); s3Itr != s3End; s3Itr++)
+        {
+          playlist.push_back(*s3Itr);
+        }
+      }
+    }
+  }
+}
+
+
+std::string Player::NextGetter(const std::string &current)
+{
+  std::vector<std::string>::const_iterator playItr = std::find(playlist.begin(), playlist.end(), current);
+
+  if(playItr == playlist.end())
+    return "";
+
+  ++playItr;
+
+  Json::Value settings;
+  {
+    auto tok = db.Get();
+    settings = tok->GetSettings();
+  }
+  bool repeat = settings.get("repeat", "no").asString() == "yes";
+
+  if(playItr == playlist.end())
+  {
+    if(!repeat)
+      return "";
+    else
+      playItr = playlist.begin();
+  }
+
+  return *playItr;
+}
+
+
+
 
 }
 

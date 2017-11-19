@@ -14,6 +14,7 @@ Database::Database()
   getSettingsStmt = nullptr;
   setSettingStmt = nullptr;
   getMetadataMatchStmt = nullptr;
+  getMetadataMatchKeyStmt = nullptr;
   getTrackidFromPathStmt = nullptr;
   getMetadataStmt = nullptr;
   getPathFromIdStmt = nullptr;
@@ -40,7 +41,7 @@ bool Database::Initialize(const std::string &path)
     if(rc != FirnLibs::SQLite::Error::None)
       return false;
 
-    rc = db.UnpreparedExecute("CREATE TABLE metadata ( trackid INTEGER NOT NULL, key TEXT NOT NULL, value TEXT NOT NULL, PRIMARY KEY (trackid, key), FOREIGN KEY(trackid) REFERENCES tracks(trackid));", nullptr);
+    rc = db.UnpreparedExecute("CREATE TABLE metadata ( trackid INTEGER NOT NULL, key TEXT NOT NULL, value TEXT NOT NULL, PRIMARY KEY (trackid, key), FOREIGN KEY(trackid) REFERENCES tracks(trackid) ON UPDATE CASCADE ON DELETE CASCADE);", nullptr);
     if(rc != FirnLibs::SQLite::Error::None)
       return false;
 
@@ -74,6 +75,14 @@ sqlite3_stmt *Database::GetMetadataMatchStmt()
   if(getMetadataMatchStmt == nullptr)
     getMetadataMatchStmt = db.Prepare("SELECT DISTINCT trackid FROM metadata WHERE value LIKE '%' || ? || '%' COLLATE NOCASE;");
   return getMetadataMatchStmt;
+}
+
+
+sqlite3_stmt *Database::GetMetadataMatchKeyStmt()
+{
+  if(getMetadataMatchKeyStmt == nullptr)
+    getMetadataMatchKeyStmt = db.Prepare("SELECT DISTINCT trackid FROM metadata WHERE key = ? AND value = ? COLLATE NOCASE;");
+  return getMetadataMatchKeyStmt;
 }
 
 
@@ -112,7 +121,7 @@ sqlite3_stmt *Database::GetMetadataStmt()
 sqlite3_stmt *Database::GetPathFromIdStmt()
 {
   if(getPathFromIdStmt == nullptr)
-    getPathFromIdStmt = db.Prepare("SELECT key, value FROM metadata WHERE trackid=?;");
+    getPathFromIdStmt = db.Prepare("SELECT path FROM tracks WHERE trackid=?;");
   return getPathFromIdStmt;
 }
 
@@ -138,11 +147,7 @@ Json::Value Database::GetTrack(const int64_t &trackid, const std::string &path)
   std::string pathInHere = path;
   if(pathInHere == "")
   {
-    auto lambda1 = [&pathInHere] (const FirnLibs::SQLite::PrepVector &vals, const std::vector<std::string> &colNames) -> void
-    {
-      vals[0].GetValue(pathInHere);
-    };
-    db.PreparedExecute(GetPathFromIdStmt(), {FirnLibs::SQLite::Prepvar(trackid)}, lambda1);
+    pathInHere = GetTrackPath(trackid);
   }
   Json::Value trackInfo;
   trackInfo["FILE"] = pathInHere;
@@ -156,6 +161,18 @@ Json::Value Database::GetTrack(const int64_t &trackid, const std::string &path)
   };
   db.PreparedExecute(GetMetadataStmt(), {FirnLibs::SQLite::Prepvar(trackid)}, lambda2);
   return trackInfo;
+}
+
+
+std::string Database::GetTrackPath(const int64_t &trackid)
+{
+  std::string path;
+  auto lambda1 = [&path] (const FirnLibs::SQLite::PrepVector &vals, const std::vector<std::string> &colNames) -> void
+  {
+    vals[0].GetValue(path);
+  };
+  db.PreparedExecute(GetPathFromIdStmt(), {FirnLibs::SQLite::Prepvar(trackid)}, lambda1);
+  return path;
 }
 
 
@@ -221,7 +238,7 @@ Json::Value Database::GetSettings()
 }
 
 
-Json::Value Database::GetTracksMatchingMetadata(const std::string &metadata)
+Json::Value Database::GetTracksMatchingMetadata(const std::string &metaValue, const std::string &metaKey)
 {
   std::vector<int64_t> matchingTracks;
   auto lambda = [&matchingTracks] (const std::vector<FirnLibs::SQLite::Prepvar> &vals, const std::vector<std::string> &colNames) -> void
@@ -229,7 +246,14 @@ Json::Value Database::GetTracksMatchingMetadata(const std::string &metadata)
     matchingTracks.push_back(0);
     vals[0].GetValue(matchingTracks.back());
   };
-  db.PreparedExecute(GetMetadataMatchStmt(), {FirnLibs::SQLite::Prepvar(metadata)}, lambda);
+  if(metaKey == "")
+  {
+    db.PreparedExecute(GetMetadataMatchStmt(), {FirnLibs::SQLite::Prepvar(metaValue)}, lambda);
+  }
+  else
+  {
+    db.PreparedExecute(GetMetadataMatchKeyStmt(), {FirnLibs::SQLite::Prepvar(metaKey), FirnLibs::SQLite::Prepvar(metaValue)}, lambda);
+  }
 
   Json::Value tracks;
 
@@ -240,6 +264,8 @@ Json::Value Database::GetTracksMatchingMetadata(const std::string &metadata)
 
   return tracks;  
 }
+
+
 
 
 
