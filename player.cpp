@@ -189,7 +189,7 @@ void Player::HandleSearch(const std::shared_ptr<FirnLibs::Networking::Client> &c
   std::vector<int64_t> trid;
   std::vector<int> trno;
   std::vector<std::string> artist, album, trackss;
-  size_t artLen = 0, albLen = 0, trackLen = 0;
+  int artLen = 0, albLen = 0, trackLen = 0;
   std::string tmp;
   for(const Json::Value &track: tracks)
   {
@@ -213,8 +213,8 @@ void Player::HandleSearch(const std::shared_ptr<FirnLibs::Networking::Client> &c
   std::string replyStr;
   for(size_t i = 0; i < album.size(); i++)
   {
-    replyStr = FirnLibs::String::StringPrintf("%6d: %-*s - %-*s - %3d %s\n",
-                trid[i],
+    replyStr = FirnLibs::String::StringPrintf("%6ld: %-*s - %-*s - %3d %s\n",
+                (int)trid[i],
                 artLen, artist[i].c_str(),
                 albLen, album[i].c_str(),
                 trno[i],

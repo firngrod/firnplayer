@@ -39,5 +39,9 @@ firnplayer: $(OBJ)
 clean:
 	rm -rf $(ODIR)/*
 
+run: firnplayer
+	./firnplayer
+
+
 test: clean firnplayer
 	./firnplayer
