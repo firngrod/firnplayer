@@ -19,25 +19,24 @@ namespace FirnPlayer
     Json::Value GetTracksMatchingMetadata(const std::string &metaValue, const std::string &metaKey = "");
 
     std::string GetTrackPath(const int64_t &trackid);
+
+    std::string GetNextMetaOfKey(const std::string &metaKey, const std::string &metaValue);
+
+    std::string GetATrackWithMetadata(const std::string &key, const std::string &value);
+
   private:
     sqlite3_stmt *AddTrackStmt();
-    sqlite3_stmt *addTrackStmt;
     sqlite3_stmt *AddMetadataStmt();
-    sqlite3_stmt *addMetadataStmt;
     sqlite3_stmt *GetMetadataMatchStmt();
-    sqlite3_stmt *getMetadataMatchStmt;
     sqlite3_stmt *GetMetadataMatchKeyStmt();
-    sqlite3_stmt *getMetadataMatchKeyStmt;
     sqlite3_stmt *GetSettingsStmt();
-    sqlite3_stmt *getSettingsStmt;
     sqlite3_stmt *SetSettingStmt();
-    sqlite3_stmt *setSettingStmt;
     sqlite3_stmt *GetTrackidFromPathStmt();
-    sqlite3_stmt *getTrackidFromPathStmt;
     sqlite3_stmt *GetMetadataStmt();
-    sqlite3_stmt *getMetadataStmt;
     sqlite3_stmt *GetPathFromIdStmt();
-    sqlite3_stmt *getPathFromIdStmt;
+    sqlite3_stmt *GetAllOfAMetadataTagStmt();
+    sqlite3_stmt *GetATrackMatchingMetadataTagStmt();
+    std::map<std::string, sqlite3_stmt *> statementMap;
 
     Json::Value GetTrack(const int64_t &trackid, const std::string &path = "");
 

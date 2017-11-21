@@ -104,6 +104,10 @@ void Player::ClientCallback(const std::shared_ptr<FirnLibs::Networking::Client> 
   {
     stream.play();
   }
+  if(FirnLibs::String::CmpNoCase(baseKey, "next"))
+  {
+    stream.PlayTrack(NextGetter(stream.GetCurrent()));
+  }
 }
 
 
@@ -319,18 +323,25 @@ std::string Player::NextGetter(const std::string &current)
   ++playItr;
 
   Json::Value settings;
-  {
-    auto tok = db.Get();
-    settings = tok->GetSettings();
-  }
+  auto tok = db.Get();
+  settings = tok->GetSettings();
   bool repeat = settings.get("repeat", "no").asString() == "yes";
+  std::string scope = settings.get("scope", "all").asString();
 
   if(playItr == playlist.end())
   {
-    if(!repeat)
+    if(!repeat && scope != "all")
       return "";
-    else
+    else if(scope != "all")
       playItr = playlist.begin();
+    else
+    {
+      Json::Value track = tok->GetTrack(current);
+      std::string nextArtist = tok->GetNextMetaOfKey("TPE2", track.get("TPE2","").asString());
+      std::string nextArtistTrack = tok->GetATrackWithMetadata("TPE2", nextArtist);
+      PreparePlaylist(nextArtistTrack);
+      return *playlist.begin();
+    }
   }
 
   return *playItr;

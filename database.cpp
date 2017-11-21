@@ -9,15 +9,6 @@ namespace FirnPlayer
 
 Database::Database()
 {
-  addTrackStmt = nullptr;
-  addMetadataStmt = nullptr;
-  getSettingsStmt = nullptr;
-  setSettingStmt = nullptr;
-  getMetadataMatchStmt = nullptr;
-  getMetadataMatchKeyStmt = nullptr;
-  getTrackidFromPathStmt = nullptr;
-  getMetadataStmt = nullptr;
-  getPathFromIdStmt = nullptr;
 }
 
 
@@ -56,73 +47,89 @@ bool Database::Initialize(const std::string &path)
 
 sqlite3_stmt *Database::AddTrackStmt()
 {
-  if(addTrackStmt == nullptr)
-    addTrackStmt = db.Prepare("INSERT INTO tracks (path) VALUES(?);");
-  return addTrackStmt;
+  if(statementMap.find("addTrackStmt") == statementMap.end())
+    statementMap["addTrackStmt"] = db.Prepare("INSERT INTO tracks (path) VALUES(?);");
+  return statementMap["addTrackStmt"];
 }
 
 
 sqlite3_stmt *Database::AddMetadataStmt()
 {
-  if(addMetadataStmt == nullptr)
-    addMetadataStmt = db.Prepare("INSERT INTO metadata (trackid, key, value) VALUES ((SELECT trackid FROM tracks WHERE path=?), ?, ?);");
-  return addMetadataStmt;
+  if(statementMap.find("addMetadataStmt") == statementMap.end())
+    statementMap["addMetadataStmt"] = db.Prepare("INSERT INTO metadata (trackid, key, value) VALUES ((SELECT trackid FROM tracks WHERE path=?), ?, ?);");
+  return statementMap["addMetadataStmt"];
 }
 
 
 sqlite3_stmt *Database::GetMetadataMatchStmt()
 {
-  if(getMetadataMatchStmt == nullptr)
-    getMetadataMatchStmt = db.Prepare("SELECT DISTINCT trackid FROM metadata WHERE value LIKE '%' || ? || '%' COLLATE NOCASE;");
-  return getMetadataMatchStmt;
+  if(statementMap.find("getMetadataMatchStmt") == statementMap.end())
+    statementMap["getMetadataMatchStmt"] = db.Prepare("SELECT DISTINCT trackid FROM metadata WHERE value LIKE '%' || ? || '%' COLLATE NOCASE;");
+  return statementMap["getMetadataMatchStmt"];
 }
 
 
 sqlite3_stmt *Database::GetMetadataMatchKeyStmt()
 {
-  if(getMetadataMatchKeyStmt == nullptr)
-    getMetadataMatchKeyStmt = db.Prepare("SELECT DISTINCT trackid FROM metadata WHERE key = ? AND value = ? COLLATE NOCASE;");
-  return getMetadataMatchKeyStmt;
+  if(statementMap.find("getMetadataMatchKeyStmt") == statementMap.end())
+    statementMap["getMetadataMatchKeyStmt"] = db.Prepare("SELECT DISTINCT trackid FROM metadata WHERE key = ? AND value = ? COLLATE NOCASE;");
+  return statementMap["getMetadataMatchKeyStmt"];
 }
 
 
 sqlite3_stmt *Database::GetSettingsStmt()
 {
-  if(getSettingsStmt == nullptr)
-    getSettingsStmt = db.Prepare("SELECT * FROM settings;");
-  return getSettingsStmt;
+  if(statementMap.find("getSettingsStmt") == statementMap.end())
+    statementMap["getSettingsStmt"] = db.Prepare("SELECT * FROM settings;");
+  return statementMap["getSettingsStmt"];
 }
 
 
 sqlite3_stmt *Database::SetSettingStmt()
 {
-  if(setSettingStmt == nullptr)
-    setSettingStmt = db.Prepare("INSERT OR REPLACE INTO settings(key, value) VALUES( ? , ? );");
-  return setSettingStmt;
+  if(statementMap.find("setSettingStmt") == statementMap.end())
+    statementMap["setSettingStmt"] = db.Prepare("INSERT OR REPLACE INTO settings(key, value) VALUES( ? , ? );");
+  return statementMap["setSettingStmt"];
 }
 
 
 sqlite3_stmt *Database::GetTrackidFromPathStmt()
 {
-  if(getTrackidFromPathStmt == nullptr)
-    getTrackidFromPathStmt = db.Prepare("SELECT trackid FROM tracks WHERE path=?;");
-  return getTrackidFromPathStmt;
+  if(statementMap.find("getTrackidFromPathStmt") == statementMap.end())
+    statementMap["getTrackidFromPathStmt"] = db.Prepare("SELECT trackid FROM tracks WHERE path=?;");
+  return statementMap["getTrackidFromPathStmt"];
 }
 
 
 sqlite3_stmt *Database::GetMetadataStmt()
 {
-  if(getMetadataStmt == nullptr)
-    getMetadataStmt = db.Prepare("SELECT key, value FROM metadata WHERE trackid=?;");
-  return getMetadataStmt;
+  if(statementMap.find("getMetadataStmt") == statementMap.end())
+    statementMap["getMetadataStmt"] = db.Prepare("SELECT key, value FROM metadata WHERE trackid=?;");
+  return statementMap["getMetadataStmt"];
 }
 
 
 sqlite3_stmt *Database::GetPathFromIdStmt()
 {
-  if(getPathFromIdStmt == nullptr)
-    getPathFromIdStmt = db.Prepare("SELECT path FROM tracks WHERE trackid=?;");
-  return getPathFromIdStmt;
+  if(statementMap.find("getPathFromIdStmt") == statementMap.end())
+    statementMap["getPathFromIdStmt"] = db.Prepare("SELECT path FROM tracks WHERE trackid=?;");
+  return statementMap["getPathFromIdStmt"];
+}
+
+
+sqlite3_stmt *Database::GetAllOfAMetadataTagStmt()
+{
+  if(statementMap.find("getAllOfAMetadataTagStmt") == statementMap.end())
+    statementMap["getAllOfAMetadataTagStmt"] = db.Prepare("SELECT DISTINCT value FROM metadata WHERE key=?;");
+  return statementMap["getAllOfAMetadataTagStmt"];
+}
+
+
+sqlite3_stmt *Database::GetATrackMatchingMetadataTagStmt()
+{
+  if(statementMap.find("getATrackMatchingMetadataTagStmt") == statementMap.end())
+    statementMap["getATrackMatchingMetadataTagStmt"] = db.Prepare("SELECT path FROM tracks WHERE trackid IN (SELECT trackid FROM metadata WHERE key=? AND value=? LIMIT 1);");
+  return statementMap["getATrackMatchingMetadataTagStmt"];
 }
 
 
@@ -264,6 +271,42 @@ Json::Value Database::GetTracksMatchingMetadata(const std::string &metaValue, co
 
   return tracks;  
 }
+
+
+std::string Database::GetNextMetaOfKey(const std::string &metaKey, const std::string &metaValue)
+{
+  std::string nextValue = "";
+  std::string firstValue = "";
+  auto lambda = [&nextValue, &metaValue, &firstValue] (const std::vector<FirnLibs::SQLite::Prepvar> &vals, const std::vector<std::string> &colNames) -> void
+  {
+    std::string tmpie;
+    vals[0].GetValue(tmpie);
+    if(firstValue == "" || tmpie < firstValue)
+      firstValue = tmpie;
+
+    if(tmpie > metaValue && (nextValue == "" || tmpie < nextValue))
+      nextValue = tmpie;
+  };
+  db.PreparedExecute(GetAllOfAMetadataTagStmt(), {metaKey}, lambda);
+  
+  if(nextValue == "")
+    return firstValue;
+
+  return nextValue;
+}
+
+
+std::string Database::GetATrackWithMetadata(const std::string &key, const std::string &value)
+{
+  std::string track;
+  auto lambda = [&track] (const std::vector<FirnLibs::SQLite::Prepvar> &vals, const std::vector<std::string> &colNames) -> void
+  {
+    vals[0].GetValue(track);
+  };
+  db.PreparedExecute(GetATrackMatchingMetadataTagStmt(), {key, value}, lambda);
+  return track;
+}
+
 
 
 
