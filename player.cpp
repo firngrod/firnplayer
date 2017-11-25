@@ -23,7 +23,7 @@ void Player::Start()
   stream.SetNextGetter(nextLambda);
 
   {
-    auto tok = db.Get();
+    auto tok = db.Get("Start Get");
     tok->Initialize(dbPath);
   }
 
@@ -124,7 +124,7 @@ void Player::DoScan(const std::shared_ptr<FirnLibs::Networking::Client> &client,
   {
     if(FirnLibs::Files::HasExtension(path, "mp3", false))
     {
-      auto tok = this->db.Get();
+      auto tok = this->db.Get("DoScan Get");
       time_t fileTime = FirnLibs::Files::FileModifiedTime(path);
       Json::Value tmpie = tok->GetTrack(path);
       time_t recordedFileTime = std::stoll(tmpie.get("MTIM", "0").asString());
@@ -144,7 +144,7 @@ void Player::DoScan(const std::shared_ptr<FirnLibs::Networking::Client> &client,
 
 void Player::HandleSettings(const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::vector<std::string> command)
 {
-  auto tok = db.Get();
+  auto tok = db.Get("HandleSettings Get");
   if(command.size() == 1)
   {
     Json::Value settings = tok->GetSettings();
@@ -186,7 +186,7 @@ void Player::HandleSearch(const std::shared_ptr<FirnLibs::Networking::Client> &c
 
   Json::Value tracks;
   {
-    auto tok = db.Get();
+    auto tok = db.Get("HandleSearch Get");
     tracks = tok->GetTracksMatchingMetadata(searchTerm);
   }
 
@@ -250,7 +250,7 @@ void Player::HandlePlay(const std::shared_ptr<FirnLibs::Networking::Client> &cli
 
   std::string trackPath;
   {
-    auto tok = db.Get();
+    auto tok = db.Get("HandlePlay Get");
     trackPath = tok->GetTrackPath(trackid);
     PreparePlaylist(trackPath);
   }
@@ -260,7 +260,7 @@ void Player::HandlePlay(const std::shared_ptr<FirnLibs::Networking::Client> &cli
 
 void Player::PreparePlaylist(const std::string &current)
 {
-  auto tok = db.Get();
+  auto tok = db.Get("PreparePlaylist Get");
   Json::Value settings = tok->GetSettings();
   std::string scope = settings.get("scope", "all").asString();
   playlist.clear();
@@ -323,7 +323,7 @@ std::string Player::NextGetter(const std::string &current)
   ++playItr;
 
   Json::Value settings;
-  auto tok = db.Get();
+  auto tok = db.Get("NextGetter Get");
   settings = tok->GetSettings();
   bool repeat = settings.get("repeat", "no").asString() == "yes";
   std::string scope = settings.get("scope", "all").asString();
