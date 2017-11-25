@@ -17,7 +17,9 @@ namespace FirnPlayer
     FirnLibs::Networking::Listener clientListener;
     FirnLibs::Mp3::Mp3Stream stream;
 
+    std::string Advance(const std::string &current);
     std::string NextGetter(const std::string &current);
+    std::string PrevGetter();
 
     std::vector<std::shared_ptr<FirnLibs::Networking::Client> > clients;
     void AddClient(const std::shared_ptr<FirnLibs::Networking::Client> &client);
@@ -31,6 +33,8 @@ namespace FirnPlayer
 
     void PreparePlaylist(const std::string &current);
     std::vector<std::string> playlist;
+    std::list<std::string> history;
+    std::list<std::string>::iterator historyPos;
 
     const std::map<std::string, std::vector<std::string> > settingsMap = 
     {

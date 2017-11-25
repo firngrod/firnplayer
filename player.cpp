@@ -10,6 +10,7 @@ namespace FirnPlayer {
 
 void Player::Start()
 {
+  historyPos = history.end();
   std::cout << "Starting database.\n";
   std::string dataPath = FirnLibs::Files::CleanPath(FirnLibs::Files::HomePath() + "/.firnplayer/");
   FirnLibs::Files::CreateFolder(dataPath);
@@ -106,7 +107,17 @@ void Player::ClientCallback(const std::shared_ptr<FirnLibs::Networking::Client> 
   }
   if(FirnLibs::String::CmpNoCase(baseKey, "next"))
   {
-    stream.PlayTrack(NextGetter(stream.GetCurrent()));
+    std::string next = NextGetter(stream.GetCurrent());
+    if(next != "")
+    {
+      stream.PlayTrack(next);
+    }
+  }
+  if(FirnLibs::String::CmpNoCase(baseKey, "prev"))
+  {
+    std::string prev = PrevGetter();
+    if(prev != "")
+      stream.PlayTrack(prev);
   }
 }
 
@@ -253,6 +264,9 @@ void Player::HandlePlay(const std::shared_ptr<FirnLibs::Networking::Client> &cli
     auto tok = db.Get("HandlePlay Get");
     trackPath = tok->GetTrackPath(trackid);
     PreparePlaylist(trackPath);
+    history.erase(historyPos, history.end());
+    history.push_back(trackPath);
+    historyPos = history.end();
   }
   stream.PlayTrack(trackPath);
 }
@@ -314,6 +328,40 @@ void Player::PreparePlaylist(const std::string &current)
 
 
 std::string Player::NextGetter(const std::string &current)
+{
+  if(current == "")
+    return "";
+
+  if(historyPos == history.end())
+  {
+    history.push_back(Advance(current));
+    while(history.size() > 100)
+      history.erase(history.begin());
+    historyPos = history.end();
+    return history.back();
+  }
+  else
+  {
+    return *historyPos++;
+  }
+}
+
+
+std::string Player::PrevGetter()
+{
+  if(history.size() == 0)
+    return "";
+
+  auto tmpie = historyPos;
+  if(--tmpie  == history.begin())
+    return "";
+
+  --historyPos;
+  return *--tmpie;
+}
+
+
+std::string Player::Advance(const std::string &current)
 {
   std::vector<std::string>::const_iterator playItr = std::find(playlist.begin(), playlist.end(), current);
 
