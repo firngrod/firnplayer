@@ -31,7 +31,8 @@ namespace FirnPlayer
     FirnLibs::Threading::Threadpool scanPool;
     void HandlePlay(const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::vector<std::string> command);
 
-    void PreparePlaylist(const std::string &current);
+    void PreparePlaylist(const std::string &current, const bool &shuffleCurrentFirst);
+    void ShufflePlaylist(const std::string &current);
     std::vector<std::string> playlist;
     std::list<std::string> history;
     std::list<std::string>::iterator historyPos;

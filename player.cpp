@@ -75,7 +75,7 @@ void Player::ClientCallback(const std::shared_ptr<FirnLibs::Networking::Client> 
   if(FirnLibs::String::CmpNoCase(baseKey, "settings"))
   {
     HandleSettings(client, command);
-    PreparePlaylist(stream.GetCurrent());
+    PreparePlaylist(stream.GetCurrent(), true);
   }
   if(FirnLibs::String::CmpNoCase(baseKey, "scan"))
   {
@@ -149,7 +149,7 @@ void Player::DoScan(const std::shared_ptr<FirnLibs::Networking::Client> &client,
   };
   
   FirnLibs::Files::ForEachFile(scanPath, lambda, true);
-  PreparePlaylist(stream.GetCurrent());
+  PreparePlaylist(stream.GetCurrent(), true);
 }
 
 
@@ -263,7 +263,7 @@ void Player::HandlePlay(const std::shared_ptr<FirnLibs::Networking::Client> &cli
   {
     auto tok = db.Get("HandlePlay Get");
     trackPath = tok->GetTrackPath(trackid);
-    PreparePlaylist(trackPath);
+    PreparePlaylist(trackPath, true);
     history.erase(historyPos, history.end());
     history.push_back(trackPath);
     historyPos = history.end();
@@ -272,7 +272,7 @@ void Player::HandlePlay(const std::shared_ptr<FirnLibs::Networking::Client> &cli
 }
 
 
-void Player::PreparePlaylist(const std::string &current)
+void Player::PreparePlaylist(const std::string &current, const bool &shuffleCurrentFirst)
 {
   auto tok = db.Get("PreparePlaylist Get");
   Json::Value settings = tok->GetSettings();
@@ -324,6 +324,25 @@ void Player::PreparePlaylist(const std::string &current)
       }
     }
   }
+  if(settings.get("shuffle", "no").asString() == "yes")
+  {
+    ShufflePlaylist(shuffleCurrentFirst ? current : "");
+  }
+}
+
+
+void Player::ShufflePlaylist(const std::string &current)
+{
+  std::random_shuffle(playlist.begin(), playlist.end());
+  if(current != "")
+  {
+    std::string tmp = playlist.front();
+    auto curItr = std::find(playlist.begin(), playlist.end(), current);
+    if(curItr == playlist.end())
+      return;
+    playlist.front() = current;
+    *curItr = tmp;
+  }
 }
 
 
@@ -363,6 +382,19 @@ std::string Player::PrevGetter()
 
 std::string Player::Advance(const std::string &current)
 {
+  Json::Value settings;
+  auto tok = db.Get("Advance Get");
+  settings = tok->GetSettings();
+  bool repeat = settings.get("repeat", "no").asString() == "yes";
+  bool shuffle = settings.get("shuffle", "no").asString() == "yes";
+  std::string scope = settings.get("scope", "all").asString();
+
+  // Special treatment of shuffle all.
+  if(scope == "all" && shuffle)
+  {
+    return tok->GetRandomTrack();
+  }
+    
   std::vector<std::string>::const_iterator playItr = std::find(playlist.begin(), playlist.end(), current);
 
   if(playItr == playlist.end())
@@ -370,24 +402,23 @@ std::string Player::Advance(const std::string &current)
 
   ++playItr;
 
-  Json::Value settings;
-  auto tok = db.Get("NextGetter Get");
-  settings = tok->GetSettings();
-  bool repeat = settings.get("repeat", "no").asString() == "yes";
-  std::string scope = settings.get("scope", "all").asString();
 
   if(playItr == playlist.end())
   {
     if(!repeat && scope != "all")
       return "";
     else if(scope != "all")
+    {
+      if(shuffle)
+        ShufflePlaylist("");
       playItr = playlist.begin();
-    else
+    }
+    else // All
     {
       Json::Value track = tok->GetTrack(current);
       std::string nextArtist = tok->GetNextMetaOfKey("TPE2", track.get("TPE2","").asString());
       std::string nextArtistTrack = tok->GetATrackWithMetadata("TPE2", nextArtist);
-      PreparePlaylist(nextArtistTrack);
+      PreparePlaylist(nextArtistTrack, false);
       return *playlist.begin();
     }
   }

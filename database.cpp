@@ -128,8 +128,18 @@ sqlite3_stmt *Database::GetAllOfAMetadataTagStmt()
 sqlite3_stmt *Database::GetATrackMatchingMetadataTagStmt()
 {
   if(statementMap.find("getATrackMatchingMetadataTagStmt") == statementMap.end())
-    statementMap["getATrackMatchingMetadataTagStmt"] = db.Prepare("SELECT path FROM tracks WHERE trackid IN (SELECT trackid FROM metadata WHERE key=? AND value=? LIMIT 1);");
+    statementMap["getATrackMatchingMetadataTagStmt"] = 
+      db.Prepare("SELECT path FROM tracks WHERE trackid IN (SELECT trackid FROM metadata WHERE key=? AND value=? LIMIT 1);");
   return statementMap["getATrackMatchingMetadataTagStmt"];
+}
+
+
+sqlite3_stmt *Database::GetRandomTrackStmt()
+{
+  if(statementMap.find("getRandomTrackStmt") == statementMap.end())
+    statementMap["getRandomTrackStmt"] = 
+      db.Prepare("SELECT path FROM tracks LIMIT 1 OFFSET (SELECT ABS(RANDOM() % (SELECT COUNT(trackid) FROM tracks)));");
+  return statementMap["getRandomTrackStmt"];
 }
 
 
@@ -308,6 +318,16 @@ std::string Database::GetATrackWithMetadata(const std::string &key, const std::s
 }
 
 
+std::string Database::GetRandomTrack()
+{
+  std::string track;
+  auto lambda = [&track] (const std::vector<FirnLibs::SQLite::Prepvar> &vals, const std::vector<std::string> &colNames) -> void
+  {
+    vals[0].GetValue(track);
+  };
+  db.PreparedExecute(GetRandomTrackStmt(), {}, lambda);
+  return track;
+}
 
 
 

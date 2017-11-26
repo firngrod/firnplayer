@@ -24,6 +24,8 @@ namespace FirnPlayer
 
     std::string GetATrackWithMetadata(const std::string &key, const std::string &value);
 
+    std::string GetRandomTrack();
+
   private:
     sqlite3_stmt *AddTrackStmt();
     sqlite3_stmt *AddMetadataStmt();
@@ -36,6 +38,7 @@ namespace FirnPlayer
     sqlite3_stmt *GetPathFromIdStmt();
     sqlite3_stmt *GetAllOfAMetadataTagStmt();
     sqlite3_stmt *GetATrackMatchingMetadataTagStmt();
+    sqlite3_stmt *GetRandomTrackStmt();
     std::map<std::string, sqlite3_stmt *> statementMap;
 
     Json::Value GetTrack(const int64_t &trackid, const std::string &path = "");
