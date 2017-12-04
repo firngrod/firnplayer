@@ -20,8 +20,20 @@ namespace FirnPlayer
     std::string Advance(const std::string &current);
     std::string NextGetter(const std::string &current);
     std::string PrevGetter();
+    bool        GetFromQueue(std::string &output);
 
-    std::vector<std::shared_ptr<FirnLibs::Networking::Client> > clients;
+    class ClientStuff
+    {
+    public:
+      ClientStuff(const std::shared_ptr<FirnLibs::Networking::Client> &client) { this->client = client; }
+      std::shared_ptr<FirnLibs::Networking::Client> client;
+      std::vector<std::string> queue;
+      bool operator==(const std::shared_ptr<FirnLibs::Networking::Client> &other) { return other == client; }
+      bool operator<(const std::shared_ptr<FirnLibs::Networking::Client> &other) { return client < other; }
+      ClientStuff &operator=(const std::shared_ptr<FirnLibs::Networking::Client> &other) { client = other; return *this; }
+    };
+    std::vector<ClientStuff> clients;
+
     void AddClient(const std::shared_ptr<FirnLibs::Networking::Client> &client);
     void ClientCallback(const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::vector<unsigned char> &data);
     void ClientErrorCallback(const std::shared_ptr<FirnLibs::Networking::Client> &client, const int &error);
@@ -30,11 +42,13 @@ namespace FirnPlayer
     void HandleSearch(const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::vector<std::string> command);
     FirnLibs::Threading::Threadpool scanPool;
     void HandlePlay(const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::vector<std::string> command);
+    void HandleQueue(const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::vector<std::string> command);
 
     void PreparePlaylist(const std::string &current, const bool &shuffleCurrentFirst);
     void ShufflePlaylist(const std::string &current);
     std::vector<std::string> playlist;
     std::list<std::string> history;
+    FirnLibs::Threading::Queue<std::string> queue;
     std::list<std::string>::iterator historyPos;
 
     const std::map<std::string, std::vector<std::string> > settingsMap = 

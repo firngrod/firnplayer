@@ -119,6 +119,10 @@ void Player::ClientCallback(const std::shared_ptr<FirnLibs::Networking::Client> 
     if(prev != "")
       stream.PlayTrack(prev);
   }
+  if(FirnLibs::String::CmpNoCase(baseKey, "queue"))
+  {
+    HandleQueue(client, command);
+  }
 }
 
 
@@ -250,11 +254,14 @@ void Player::HandlePlay(const std::shared_ptr<FirnLibs::Networking::Client> &cli
   {
     FirnLibs::Crypto::StringToVector(reply, "Invalid usage.  Usage:  play <trackid>\n");
     client->Send(reply);
+    return;
   }
 
   if(command[1].find_first_not_of("0123456789") != std::string::npos)
   {
     FirnLibs::Crypto::StringToVector(reply, "Invalid usage.  trackid must be all numbers.\n");
+    client->Send(reply);
+    return;
   }
   
   int64_t trackid = std::stoll(command[1]);
@@ -263,12 +270,52 @@ void Player::HandlePlay(const std::shared_ptr<FirnLibs::Networking::Client> &cli
   {
     auto tok = db.Get("HandlePlay Get");
     trackPath = tok->GetTrackPath(trackid);
+    if(trackPath == "")
+    {
+      FirnLibs::Crypto::StringToVector(reply, "Track does not exist.\n");
+      client->Send(reply);
+      return;
+    }
     PreparePlaylist(trackPath, true);
     history.erase(historyPos, history.end());
     history.push_back(trackPath);
     historyPos = history.end();
   }
   stream.PlayTrack(trackPath);
+}
+
+
+void Player::HandleQueue(const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::vector<std::string> command)
+{
+  std::vector<unsigned char> reply;
+  if(command.size() != 2)
+  {
+    FirnLibs::Crypto::StringToVector(reply, "Invalid usage.  Usage:  play <trackid>\n");
+    client->Send(reply);
+    return;
+  }
+
+  if(command[1].find_first_not_of("0123456789") != std::string::npos)
+  {
+    FirnLibs::Crypto::StringToVector(reply, "Invalid usage.  trackid must be all numbers.\n");
+    client->Send(reply);
+    return;
+  }
+  
+  int64_t trackid = std::stoll(command[1]);
+
+  std::string trackPath;
+  {
+    auto tok = db.Get("HandleQueue Get");
+    trackPath = tok->GetTrackPath(trackid);
+    if(trackPath == "")
+    {
+      FirnLibs::Crypto::StringToVector(reply, "Track does not exist.\n");
+      client->Send(reply);
+      return;
+    }
+  }
+  queue.Push(trackPath);
 }
 
 
@@ -389,6 +436,14 @@ std::string Player::Advance(const std::string &current)
   bool shuffle = settings.get("shuffle", "no").asString() == "yes";
   std::string scope = settings.get("scope", "all").asString();
 
+  std::string fromQueue;
+  bool reShuffle = GetFromQueue(fromQueue);
+  if(reShuffle)
+    PreparePlaylist(fromQueue, true);
+
+  if(fromQueue != "")
+    return fromQueue;
+
   // Special treatment of shuffle all.
   if(scope == "all" && shuffle)
   {
@@ -427,6 +482,14 @@ std::string Player::Advance(const std::string &current)
 }
 
 
+bool Player::GetFromQueue(std::string &output)
+{
+  output = queue.Pop();
+  if(output == "")
+    return false;
+
+  return queue.Size() == 0;
+}
 
 
 }
