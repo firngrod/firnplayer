@@ -155,7 +155,7 @@ Json::Value Database::GetTrack(const std::string &path)
   if(trackid == 0)
     return Json::Value();
 
-  return GetTrack(trackid);
+  return GetTrack(trackid, path);
 }
 
 

@@ -123,10 +123,14 @@ void Player::ClientCallback(const std::shared_ptr<FirnLibs::Networking::Client> 
   {
     HandleQueue(client, command);
   }
+  if(FirnLibs::String::CmpNoCase(baseKey, "info"))
+  {
+    HandleInfo(client, command);
+  }
 }
 
 
-void Player::DoScan(const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::vector<std::string> command)
+void Player::DoScan(const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::vector<std::string> &command)
 {
   std::string scanPath;
   for(unsigned int i = 1; i < command.size(); i++)
@@ -157,7 +161,7 @@ void Player::DoScan(const std::shared_ptr<FirnLibs::Networking::Client> &client,
 }
 
 
-void Player::HandleSettings(const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::vector<std::string> command)
+void Player::HandleSettings(const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::vector<std::string> &command)
 {
   auto tok = db.Get("HandleSettings Get");
   if(command.size() == 1)
@@ -190,7 +194,7 @@ void Player::HandleSettings(const std::shared_ptr<FirnLibs::Networking::Client> 
 }
 
 
-void Player::HandleSearch(const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::vector<std::string> command)
+void Player::HandleSearch(const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::vector<std::string> &command)
 {
   std::string searchTerm;
   for(unsigned int i = 1; i < command.size(); i++)
@@ -247,7 +251,7 @@ void Player::HandleSearch(const std::shared_ptr<FirnLibs::Networking::Client> &c
 }
 
 
-void Player::HandlePlay(const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::vector<std::string> command)
+void Player::HandlePlay(const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::vector<std::string> &command)
 {
   std::vector<unsigned char> reply;
   if(command.size() != 2)
@@ -285,7 +289,7 @@ void Player::HandlePlay(const std::shared_ptr<FirnLibs::Networking::Client> &cli
 }
 
 
-void Player::HandleQueue(const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::vector<std::string> command)
+void Player::HandleQueue(const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::vector<std::string> &command)
 {
   std::vector<unsigned char> reply;
   if(command.size() != 2)
@@ -317,6 +321,50 @@ void Player::HandleQueue(const std::shared_ptr<FirnLibs::Networking::Client> &cl
   }
   queue.Push(trackPath);
 }
+
+
+void Player::HandleInfo(const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::vector<std::string> &command)
+{
+  std::vector<unsigned char> reply;
+  bool invalidCommand = false;
+  if(command.size() == 1)
+  {
+    invalidCommand = true;
+  }
+  else
+  {
+    for(auto cItr = command.begin() + 1, cEnd = command.end(); cItr != cEnd; cItr++)
+    {
+      if(cItr->find_first_not_of("0123456789") != std::string::npos)
+      {
+        invalidCommand = true;
+        break;
+      }
+    }
+  }
+
+  if(invalidCommand)
+  {
+    FirnLibs::Crypto::StringToVector(reply, "Invalid usage.  Correct usage:  info <trackid> [<trackid> ...]\ntrackids must be numbers");
+    client->Send(reply);
+    return;
+  }
+
+  auto tok = db.Get("HandleInfo Get");
+  Json::Value trackInfos;
+  for(auto cItr = command.begin() + 1, cEnd = command.end(); cItr != cEnd; cItr++)
+  {
+    int64_t trackid = std::stoll(*cItr);
+    {
+      trackInfos[*cItr] = tok->GetTrack(trackid);
+    }
+  }
+
+  FirnLibs::Crypto::StringToVector(reply, trackInfos.toStyledString());
+  client->Send(reply);
+  return;
+}
+
 
 
 void Player::PreparePlaylist(const std::string &current, const bool &shuffleCurrentFirst)

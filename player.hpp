@@ -38,11 +38,12 @@ namespace FirnPlayer
     void ClientCallback(const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::vector<unsigned char> &data);
     void ClientErrorCallback(const std::shared_ptr<FirnLibs::Networking::Client> &client, const int &error);
 
-    void DoScan(const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::vector<std::string> command);
-    void HandleSearch(const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::vector<std::string> command);
+    void DoScan(const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::vector<std::string> &command);
+    void HandleSearch(const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::vector<std::string> &command);
     FirnLibs::Threading::Threadpool scanPool;
-    void HandlePlay(const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::vector<std::string> command);
-    void HandleQueue(const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::vector<std::string> command);
+    void HandlePlay(const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::vector<std::string> &command);
+    void HandleQueue(const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::vector<std::string> &command);
+    void HandleInfo(const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::vector<std::string> &command);
 
     void PreparePlaylist(const std::string &current, const bool &shuffleCurrentFirst);
     void ShufflePlaylist(const std::string &current);
@@ -57,6 +58,6 @@ namespace FirnPlayer
       {"repeat", {"yes", "no"}},
       {"shuffle", {"yes", "no"}},
     };
-    void HandleSettings(const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::vector<std::string> command);
+    void HandleSettings(const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::vector<std::string> &command);
   };
 }
