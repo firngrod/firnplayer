@@ -21,7 +21,7 @@ DEPS=$(LDEPS)
 _LDEPS=
 LDEPS=$(patsubst %,$(IDIR)/%,$(_LDEPS))
 
-_OBJ=firnplayer.o firnlibs/crypto/aes.o firnlibs/crypto/zip.o firnlibs/crypto/general.o firnlibs/threading/threadpool.o firnlibs/networking/networking.o firnlibs/networking/listener.o firnlibs/networking/client.o firnlibs/files/files.o firnlibs/string/string.o firnlibs/mp3/metadata.o firnlibs/sqlite/sqlite.o firnlibs/sqlite/prepvar.o database.o firnlibs/mp3/mp3stream.o player.o
+_OBJ=firnplayer.o firnlibs/crypto/aes.o firnlibs/crypto/zip.o firnlibs/crypto/general.o firnlibs/threading/threadpool.o firnlibs/networking/networking.o firnlibs/networking/listener.o firnlibs/networking/client.o firnlibs/files/files.o firnlibs/string/string.o firnlibs/mp3/metadata.o firnlibs/sqlite/sqlite.o firnlibs/sqlite/prepvar.o database.o firnlibs/mp3/mp3stream.o player.o command.o
 OBJ=$(patsubst %,$(ODIR)/%,$(_OBJ))
 
 $(ODIR)/%.o: %.cpp $(DEPS) $(LDEPS)

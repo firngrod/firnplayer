@@ -28,6 +28,9 @@ void Player::Start()
     tok->Initialize(dbPath);
   }
 
+  std::cout << "Mapping commands.\n";
+  MapCmds();
+
   std::cout << "Starting Networking.\n";
   FirnLibs::Networking::Init();
   auto lambda = [this] (const std::shared_ptr<FirnLibs::Networking::Client> &newClient) -> void
@@ -62,33 +65,55 @@ void Player::ClientErrorCallback(const std::shared_ptr<FirnLibs::Networking::Cli
   clients.erase(std::find(clients.begin(), clients.end(), client));
 }
 
+void Player::MapCmds()
+{
+  cmds.description = "Commands available:";
+  
+  // Help function
+  const std::string helpCmd = "help";
+  cmds[helpCmd].func = 
+    [this](const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::string &command) -> bool 
+      {return this->HandleHelp(client, command);};
+  cmds[helpCmd].description = "Display this menu.";
+
+  // Settings function.  Lots of dummy subcommands just to clarify settings.
+  const std::string settingsCmd = "settings";
+  cmds[settingsCmd].description = "Settings command.  See settings options below.  Blank lists current settings.";
+  cmds[settingsCmd].arguments = "[<setting> <value>]";
+  cmds[settingsCmd].func = 
+    [this](const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::string &command) -> bool 
+      {this->HandleSettings(client, command); return true;};
+  const std::string scopeCmd = "scope";
+  cmds[settingsCmd][scopeCmd].description = "Sets the playback scope for the player.";
+  cmds[settingsCmd][scopeCmd].arguments = "<all | artist | album | track>";
+  const std::string repeatCmd = "repeat";
+  cmds[settingsCmd][repeatCmd].description = "Toggle repeat of playback of the current scope.";
+  cmds[settingsCmd][repeatCmd].arguments = "<yes | no>";
+  const std::string shuffleCmd = "shuffle";
+  cmds[settingsCmd][shuffleCmd].description = "Toggle shuffle of tracks within the current scope.";
+  cmds[settingsCmd][shuffleCmd].arguments = "<yes | no>";
+
+  // Scan command
+  const std::string scanCmd = "scan";
+  cmds[scanCmd].description = "Scan server directory for mp3 files for the library.";
+  cmds[scanCmd].arguments = "<path to scan>";
+  cmds[scanCmd].func = 
+    [this](const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::string &command) -> bool 
+      {this->HandleScan(client, command); return true;};
+}
 
 void Player::ClientCallback(const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::vector<unsigned char> &data)
 {
   std::string commandStr((const char *)&data[0], data.size());
+
+  if(cmds.Execute(client, commandStr))
+    return;
   
   std::vector<std::string> command = FirnLibs::String::Split(commandStr, " \r\n");
   if(command.size() == 0)
     return;
   
   std::string baseKey = command[0];
-  if(FirnLibs::String::CmpNoCase(baseKey, "settings"))
-  {
-    HandleSettings(client, command);
-    PreparePlaylist(stream.GetCurrent(), true);
-  }
-  if(FirnLibs::String::CmpNoCase(baseKey, "scan"))
-  {
-    auto lambda = [this, client, command] () -> void
-    {
-      this->DoScan(client, command);
-    };
-    scanPool.Push(lambda);
-  
-    std::vector<unsigned char> reply;
-    FirnLibs::Crypto::StringToVector(reply, "Started scan\n");
-    client->Send(reply);
-  }
   if(FirnLibs::String::CmpNoCase(baseKey, "search"))
   {
     HandleSearch(client, command);
@@ -130,20 +155,29 @@ void Player::ClientCallback(const std::shared_ptr<FirnLibs::Networking::Client> 
 }
 
 
-void Player::DoScan(const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::vector<std::string> &command)
+void Player::HandleScan(const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::string &command)
 {
-  std::string scanPath;
-  for(unsigned int i = 1; i < command.size(); i++)
+  auto lambda = [this, client, command] () -> void
   {
-    scanPath += scanPath.size() > 0 ? " " : "";
-    scanPath += command[i];
-  }
+    this->DoScan(client, command);
+  };
+  scanPool.Push(lambda);
+
+  std::vector<unsigned char> reply;
+  FirnLibs::Crypto::StringToVector(reply, "Started scan\n");
+  client->Send(reply);
+}
+
+
+void Player::DoScan(const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::string &command)
+{
+  std::string scanPath = FirnLibs::String::Trim(command, " \r\n");
 
   auto lambda = [this] (const std::string &path) -> void
   {
     if(FirnLibs::Files::HasExtension(path, "mp3", false))
     {
-      auto tok = this->db.Get("DoScan Get");
+      auto tok = this->db.Get("Player::DoScan Get");
       time_t fileTime = FirnLibs::Files::FileModifiedTime(path);
       Json::Value tmpie = tok->GetTrack(path);
       time_t recordedFileTime = std::stoll(tmpie.get("MTIM", "0").asString());
@@ -161,10 +195,11 @@ void Player::DoScan(const std::shared_ptr<FirnLibs::Networking::Client> &client,
 }
 
 
-void Player::HandleSettings(const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::vector<std::string> &command)
+void Player::HandleSettings(const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::string &commandStr)
 {
+  std::vector<std::string> command = FirnLibs::String::Split(commandStr, " \r\n");
   auto tok = db.Get("HandleSettings Get");
-  if(command.size() == 1)
+  if(command.size() == 0)
   {
     Json::Value settings = tok->GetSettings();
     std::vector<unsigned char> replyData;
@@ -172,14 +207,14 @@ void Player::HandleSettings(const std::shared_ptr<FirnLibs::Networking::Client> 
     client->Send(replyData);
     return;
   }
-  else if(command.size() == 3)
+  else if(command.size() == 2)
   {
-    auto setItr = settingsMap.find(command[1]);
+    auto setItr = settingsMap.find(command[0]);
     if(setItr != settingsMap.end())
     {
-      if(std::find(setItr->second.begin(), setItr->second.end(), command[2]) != setItr->second.end())
+      if(std::find(setItr->second.begin(), setItr->second.end(), command[1]) != setItr->second.end())
       {
-        tok->SetSetting(command[1], command[2]);
+        tok->SetSetting(command[0], command[1]);
         std::vector<unsigned char> reply;
         Json::Value settings = tok->GetSettings();
         FirnLibs::Crypto::StringToVector(reply, "Settings succesfully updated.\n" + settings.toStyledString());
@@ -363,6 +398,15 @@ void Player::HandleInfo(const std::shared_ptr<FirnLibs::Networking::Client> &cli
   FirnLibs::Crypto::StringToVector(reply, trackInfos.toStyledString());
   client->Send(reply);
   return;
+}
+
+
+bool Player::HandleHelp(const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::string &command)
+{
+  std::vector<unsigned char> reply;
+  FirnLibs::Crypto::StringToVector(reply, FirnLibs::String::Trim(cmds.ToString(), " "));
+  client->Send(reply);
+  return true;
 }
 
 
