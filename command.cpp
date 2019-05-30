@@ -22,7 +22,9 @@ namespace FirnPlayer
 
   std::string Command::ToString(const std::string &argTemplate) const
   {
-    std::string outputStr = FirnLibs::String::StringPrintf(argTemplate, arguments.c_str()) + description + "\n";
+    std::string outputStr = FirnLibs::String::StringPrintf(argTemplate, arguments.c_str());
+    outputStr += FirnLibs::String::Replace(description, "\n", "\n" + FirnLibs::String::StringPrintf(argTemplate, ""));
+    outputStr += "\n";
 
     int maxLenCmd = 0;
     int maxLenArg = 0;
