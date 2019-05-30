@@ -155,8 +155,8 @@ void Player::MapCmds()
   
   // Info command
   const std::string infoCmd = "info";
-  cmds[infoCmd].description = "Get detailed info about one or more tracks.\nUse search to find trackids.";
-  cmds[infoCmd].arguments = "<trackid> [<trackid> ...]";
+  cmds[infoCmd].description = "Get detailed info about one or more tracks.\nUse search to find trackids.\nBlank arguments returns currently playing track.";
+  cmds[infoCmd].arguments = "[<trackid> [<trackid> ...]]";
   cmds[infoCmd].func =
     [this](const std::shared_ptr<FirnLibs::Networking::Client> &client, const std::string &command) -> bool
       {this->HandleInfo(client, command); return true;};
@@ -407,11 +407,7 @@ void Player::HandleInfo(const std::shared_ptr<FirnLibs::Networking::Client> &cli
   std::vector<std::string> cmdVec = FirnLibs::String::Split(command, " \r\n");
   std::vector<unsigned char> reply;
   bool invalidCommand = false;
-  if(cmdVec.size() == 0)
-  {
-    invalidCommand = true;
-  }
-  else
+  if(cmdVec.size() > 0)
   {
     for(auto cItr = cmdVec.begin(), cEnd = cmdVec.end(); cItr != cEnd; cItr++)
     {
@@ -432,11 +428,21 @@ void Player::HandleInfo(const std::shared_ptr<FirnLibs::Networking::Client> &cli
 
   auto tok = db.Get("Player::HandleInfo Get");
   Json::Value trackInfos;
-  for(auto cItr = cmdVec.begin(), cEnd = cmdVec.end(); cItr != cEnd; cItr++)
+  if(cmdVec.size() == 0)
   {
-    int64_t trackid = std::stoll(*cItr);
+    std::string curTrack = stream.GetCurrent();
+    auto tok = db.Get("Player::HandleInfo Get");
+    Json::Value trackInfo = tok->GetTrack(curTrack);
+    trackInfos[trackInfo.get("TRID", "").asString()] = trackInfo;
+  }
+  else
+  {
+    for(auto cItr = cmdVec.begin(), cEnd = cmdVec.end(); cItr != cEnd; cItr++)
     {
-      trackInfos[*cItr] = tok->GetTrack(trackid);
+      int64_t trackid = std::stoll(*cItr);
+      {
+        trackInfos[*cItr] = tok->GetTrack(trackid);
+      }
     }
   }
 
