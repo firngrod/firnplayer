@@ -32,7 +32,7 @@ void Player::Start()
   MapCmds();
 
   std::cout << "Starting Networking.\n";
-  FirnLibs::Networking::Init();
+  FirnLibs::Networking::Init(2);
   auto lambda = [this] (const std::shared_ptr<FirnLibs::Networking::Client> &newClient) -> void
   {
     this->AddClient(newClient);
