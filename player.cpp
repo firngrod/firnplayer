@@ -476,6 +476,7 @@ void Player::PreparePlaylist(const std::string &current, const bool &shuffleCurr
   {
     Json::Value curTrack = tok->GetTrack(current);
     std::string metaKey;
+    std::string metaKey2;
     if(scope == "artist" || scope == "all")
     {
       metaKey = "TPE2";
@@ -483,10 +484,16 @@ void Player::PreparePlaylist(const std::string &current, const bool &shuffleCurr
     else if(scope == "album")
     {
       metaKey = "TALB";
+      metaKey2 = "TPE2";
     }
     std::string metaValue = curTrack.get(metaKey, "").asString();
+    std::string metaValue2;
+    if(metaKey2 != "")
+    {
+      metaValue2 = curTrack.get(metaKey, "").asString();
+    }
 
-    Json::Value tracks = tok->GetTracksMatchingMetadata(metaValue, metaKey);
+    Json::Value tracks = tok->GetTracksMatchingMetadata(metaValue, metaKey, metaValue2, metaKey2);
     std::map<std::string, std::map<int, std::vector<std::string> > > sortingMap;
     std::string tmp;
     int trackNo = 0;

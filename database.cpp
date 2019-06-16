@@ -77,6 +77,13 @@ sqlite3_stmt *Database::GetMetadataMatchKeyStmt()
 }
 
 
+sqlite3_stmt *Database::GetMetadataMatchTwoKeyStmt()
+{
+  if(statementMap.find("getMetadataMatchTwoKeyStmt") == statementMap.end())
+    statementMap["getMetadataMatchTwoKeyStmt"] = db.Prepare("SELECT DISTINCT trackid FROM metadata WHERE key = ? AND value = ? COLLATE NOCASE AND trackid IN (SELECT trackid FROM metadata WHERE key = ? AND value = ? COLLATE NOCASE);");
+  return statementMap["getMetadataMatchTwoKeyStmt"];
+}
+
 sqlite3_stmt *Database::GetSettingsStmt()
 {
   if(statementMap.find("getSettingsStmt") == statementMap.end())
@@ -255,7 +262,8 @@ Json::Value Database::GetSettings()
 }
 
 
-Json::Value Database::GetTracksMatchingMetadata(const std::string &metaValue, const std::string &metaKey)
+Json::Value Database::GetTracksMatchingMetadata(const std::string &metaValue, const std::string &metaKey,
+                                                const std::string &metaValue2, const std::string &metaKey2)
 {
   std::vector<int64_t> matchingTracks;
   auto lambda = [&matchingTracks] (const std::vector<FirnLibs::SQLite::Prepvar> &vals, const std::vector<std::string> &colNames) -> void
@@ -267,9 +275,13 @@ Json::Value Database::GetTracksMatchingMetadata(const std::string &metaValue, co
   {
     db.PreparedExecute(GetMetadataMatchStmt(), {FirnLibs::SQLite::Prepvar(metaValue)}, lambda);
   }
-  else
+  else if(metaValue2 == "")
   {
     db.PreparedExecute(GetMetadataMatchKeyStmt(), {FirnLibs::SQLite::Prepvar(metaKey), FirnLibs::SQLite::Prepvar(metaValue)}, lambda);
+  }
+  else
+  {
+    db.PreparedExecute(GetMetadataMatchTwoKeyStmt(), {metaKey, metaValue, metaKey2, metaValue2}, lambda);
   }
 
   Json::Value tracks;
